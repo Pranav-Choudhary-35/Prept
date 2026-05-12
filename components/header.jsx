@@ -1,12 +1,12 @@
 import { checkUser } from "@/lib/checkUser";
 import { Button } from "./ui/button";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+
 import Link from "next/link";
 import Image from "next/image";
 import RoleRedirect from "./RoleRedirect";
 import CreditButton from "./CreditButton";
 import { CalendarDays, Users } from "lucide-react";
-
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 const Header = async () => {
   const user = await checkUser();
 
