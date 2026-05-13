@@ -122,7 +122,7 @@ export default function LandingPage() {
 
             <p className="text-sm text-stone-500 text-center sm:text-left">
               <strong className="text-stone-400 font-medium">
-                2,400+ engineers
+                6,400+ engineers
               </strong>{" "}
               cracked FAANG interviews via Prept
             </p>
