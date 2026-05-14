@@ -4,13 +4,15 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 // Stream Video
+
+// Stream Video
 import {
   StreamVideoClient,
   StreamVideo,
   StreamCall,
 } from "@stream-io/video-react-sdk";
+
 import "@stream-io/video-react-sdk/dist/css/styles.css";
-import "stream-chat-react/dist/css/v2/index.css";
 
 import { Loader2 } from "lucide-react";
 import CallUI from "./CallUI";

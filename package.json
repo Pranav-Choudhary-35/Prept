@@ -36,8 +36,8 @@
     "resend": "^6.12.3",
     "shiki": "^4.0.2",
     "sonner": "^2.0.7",
-    "stream-chat": "^9.38.0",
-    "stream-chat-react": "^14.2.0",
+    "stream-chat": "^9.44.0",
+    "stream-chat-react": "^13.14.5",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
