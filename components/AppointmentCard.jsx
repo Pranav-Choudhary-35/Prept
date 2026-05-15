@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Video, Sparkles } from "lucide-react";
+import { Calendar, Clock, FileText, Sparkles, Video } from "lucide-react";
 import { FeedbackModal } from "./FeedbackModal";
 import { formatDate, formatDuration, formatTime } from "@/lib/helpers";
 import { RATING_LABEL, RATING_STYLES, STATUS_STYLES } from "@/lib/data";
@@ -22,6 +22,7 @@ export function AppointmentCard({ booking, mode, isPast = false }) {
     creditsCharged,
     streamCallId,
     recordingUrl,
+    transcriptionUrl,
     feedback,
   } = booking;
 
@@ -39,6 +40,11 @@ export function AppointmentCard({ booking, mode, isPast = false }) {
       : "border-amber-400/20 bg-amber-400/5 text-amber-400";
 
   const isUpcoming = status === "SCHEDULED";
+  const canViewRecording = mode === "interviewer" || has?.({ plan: "pro" });
+  const canViewFeedback =
+    mode === "interviewer" ||
+    has?.({ plan: "starter" }) ||
+    has?.({ plan: "pro" });
 
   return (
     <>
@@ -156,7 +162,7 @@ export function AppointmentCard({ booking, mode, isPast = false }) {
           </div>
         )}
 
-        {(streamCallId || recordingUrl || feedback) && (
+        {(streamCallId || recordingUrl || transcriptionUrl || feedback) && (
           <div className="flex items-center gap-2 flex-wrap pt-1">
             {!isPast && streamCallId && isUpcoming && (
               <Button variant="gold" size="sm" className="gap-2" asChild>
@@ -167,38 +173,51 @@ export function AppointmentCard({ booking, mode, isPast = false }) {
               </Button>
             )}
 
-            {recordingUrl && has?.({ plan: "pro" }) && (
+            {recordingUrl && canViewRecording && (
               <Button variant="outline" size="sm" className="gap-2" asChild>
                 <a
                   href={recordingUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  📹 Recording
+                  <Video size={13} />
+                  Recording
                 </a>
               </Button>
             )}
 
-            {feedback &&
-              (has?.({ plan: "starter" }) || has?.({ plan: "pro" })) && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 border-amber-400/20 text-amber-400 hover:bg-amber-400/10 hover:border-amber-400/40"
-                    onClick={() => setFeedbackOpen(true)}
-                  >
-                    <Sparkles size={12} />
-                    Full Feedback
-                  </Button>
-                  <Badge
-                    variant="outline"
-                    className={RATING_STYLES[feedback.overallRating]}
-                  >
-                    ✦ {RATING_LABEL[feedback.overallRating]} performance
-                  </Badge>
-                </>
-              )}
+            {transcriptionUrl && mode === "interviewer" && (
+              <Button variant="outline" size="sm" className="gap-2" asChild>
+                <a
+                  href={`/api/transcripts/${booking.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText size={13} />
+                  Transcript
+                </a>
+              </Button>
+            )}
+
+            {feedback && canViewFeedback && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-amber-400/20 text-amber-400 hover:bg-amber-400/10 hover:border-amber-400/40"
+                  onClick={() => setFeedbackOpen(true)}
+                >
+                  <Sparkles size={12} />
+                  Full Feedback
+                </Button>
+                <Badge
+                  variant="outline"
+                  className={RATING_STYLES[feedback.overallRating]}
+                >
+                  ✦ {RATING_LABEL[feedback.overallRating]} performance
+                </Badge>
+              </>
+            )}
           </div>
         )}
       </article>

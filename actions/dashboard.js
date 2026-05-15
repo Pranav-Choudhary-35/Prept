@@ -3,6 +3,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { StreamClient } from "@stream-io/node-sdk";
 import { request } from "@arcjet/next";
 import { createRateLimiter, checkRateLimit } from "@/lib/arcjet";
 import { Resend } from "resend";
@@ -74,6 +75,81 @@ export const getAvailability = async () => {
 
 // ─── APPOINTMENTS ─────────────────────────────────────────────────────────────
 
+const getStreamClient = () => {
+  if (
+    !process.env.NEXT_PUBLIC_STREAM_API_KEY ||
+    !process.env.STREAM_SECRET_KEY
+  ) {
+    return null;
+  }
+
+  return new StreamClient(
+    process.env.NEXT_PUBLIC_STREAM_API_KEY,
+    process.env.STREAM_SECRET_KEY
+  );
+};
+
+const getLatestByStartTime = (items = []) => {
+  return [...items]
+    .filter((item) => item?.url)
+    .sort((a, b) => new Date(b.start_time) - new Date(a.start_time))[0];
+};
+
+const hydrateStreamArtifacts = async (appointments) => {
+  const client = getStreamClient();
+  if (!client) return appointments;
+
+  const now = new Date();
+
+  return Promise.all(
+    appointments.map(async (booking) => {
+      if (!booking.streamCallId || new Date(booking.endTime) > now) {
+        return booking;
+      }
+
+      try {
+        const call = client.video.call("default", booking.streamCallId);
+        const [recordingsResponse, transcriptionsResponse] =
+          await Promise.allSettled([
+            call.listRecordings(),
+            call.listTranscriptions(),
+          ]);
+
+        const latestRecording =
+          recordingsResponse.status === "fulfilled"
+            ? getLatestByStartTime(recordingsResponse.value.recordings)
+            : null;
+        const latestTranscription =
+          transcriptionsResponse.status === "fulfilled"
+            ? getLatestByStartTime(transcriptionsResponse.value.transcriptions)
+            : null;
+
+        if (
+          latestRecording?.url &&
+          latestRecording.url !== booking.recordingUrl
+        ) {
+          await db.booking.update({
+            where: { id: booking.id },
+            data: { recordingUrl: latestRecording.url },
+          });
+        }
+
+        return {
+          ...booking,
+          recordingUrl: latestRecording?.url ?? booking.recordingUrl,
+          transcriptionUrl: latestTranscription?.url ?? null,
+        };
+      } catch (err) {
+        console.error(
+          `Failed to hydrate Stream artifacts for booking ${booking.id}:`,
+          err
+        );
+        return booking;
+      }
+    })
+  );
+};
+
 export const getInterviewerAppointments = async () => {
   const user = await currentUser();
   if (!user) throw new Error("Unauthorized");
@@ -81,7 +157,7 @@ export const getInterviewerAppointments = async () => {
   const dbUser = await db.user.findUnique({ where: { clerkUserId: user.id } });
   if (!dbUser) throw new Error("User not found");
 
-  return db.booking.findMany({
+  const appointments = await db.booking.findMany({
     where: { interviewerId: dbUser.id },
     include: {
       interviewee: { select: { name: true, imageUrl: true, email: true } },
@@ -89,6 +165,8 @@ export const getInterviewerAppointments = async () => {
     },
     orderBy: { startTime: "desc" },
   });
+
+  return hydrateStreamArtifacts(appointments);
 };
 
 // ─── EARNINGS / WITHDRAWAL ────────────────────────────────────────────────────
